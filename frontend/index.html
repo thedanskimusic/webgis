@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebGIS Demo - Real Estate Map</title>
+    <title>WebGIS // SPATIAL DATABASE CLI</title>
+    <link rel="icon" type="image/png" href="favicon.png">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
 
@@ -196,9 +197,227 @@
             50% { box-shadow: 0 0 30px rgba(255, 51, 51, 0.6); border-color: #ff3333; }
             100% { box-shadow: 0 0 15px rgba(255, 51, 51, 0.3); border-color: #990000; }
         }
+
+        /* Splash Screen Overlay */
+        #splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #070202;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 25px;
+            transition: opacity 0.8s ease-in-out, visibility 0.8s ease-in-out;
+            opacity: 1;
+            visibility: visible;
+        }
+
+        #splash-screen.fade-out {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .globe-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 180px;
+            height: 180px;
+        }
+
+        .globe-pulse {
+            animation: pulseGlobe 2.5s ease-in-out infinite;
+        }
+
+        .retro-globe {
+            width: 100%;
+            height: 100%;
+        }
+
+        .globe-ring {
+            fill: none;
+            stroke: #ff3333;
+            stroke-width: 0.75;
+            stroke-opacity: 0.35;
+            stroke-dasharray: 4 6;
+            animation: spinRing 24s linear infinite;
+            transform-origin: 100px 100px;
+        }
+
+        .globe-outline {
+            fill: none;
+            stroke: #ff3333;
+            stroke-width: 2.2;
+            stroke-opacity: 0.9;
+        }
+
+        .globe-grid {
+            transform: rotate(-15deg);
+            transform-origin: 100px 100px;
+        }
+
+        .globe-line {
+            fill: none;
+            stroke: #ff3333;
+            stroke-width: 1;
+            stroke-opacity: 0.45;
+        }
+
+        .globe-line.equator {
+            stroke-width: 1.2;
+            stroke-opacity: 0.6;
+        }
+
+        .longitude {
+            transform-origin: 100px 100px;
+            animation: spinLongitude 6s linear infinite;
+        }
+
+        .lon-1 { animation-delay: 0s; }
+        .lon-2 { animation-delay: -1.5s; }
+        .lon-3 { animation-delay: -3s; }
+        .lon-4 { animation-delay: -4.5s; }
+
+        .scan-line {
+            stroke: #ff3333;
+            stroke-width: 1.5;
+            stroke-opacity: 0.85;
+            transform-origin: 100px 100px;
+            animation: scanGlobe 4s ease-in-out infinite;
+        }
+
+        .webgis-logo {
+            margin-top: 10px;
+        }
+
+        .logo-text {
+            fill: none;
+            stroke: #ff3333;
+            stroke-width: 1.5;
+            stroke-dasharray: 500;
+            stroke-dashoffset: 500;
+            animation: drawText 2.2s ease-in-out forwards;
+            font-size: 3.5rem;
+            font-weight: bold;
+            letter-spacing: 8px;
+            font-family: 'Share Tech Mono', Courier New, monospace;
+        }
+
+        #splash-logs {
+            width: 350px;
+            height: 110px;
+            font-family: 'Share Tech Mono', monospace;
+            color: #ff6666;
+            font-size: 0.85rem;
+            text-align: left;
+            padding: 10px;
+            border-left: 2px solid #800000;
+            background: rgba(20, 5, 5, 0.4);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            text-transform: uppercase;
+        }
+
+        .log-line {
+            opacity: 0;
+            animation: showLogLine 0.2s forwards;
+            letter-spacing: 1px;
+        }
+
+        @keyframes spinRing {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes spinLongitude {
+            0% {
+                transform: scaleX(1);
+                stroke-opacity: 0.55;
+            }
+            25% {
+                stroke-opacity: 0.25;
+            }
+            50% {
+                transform: scaleX(-1);
+                stroke-opacity: 0.55;
+            }
+            75% {
+                stroke-opacity: 0.25;
+            }
+            100% {
+                transform: scaleX(1);
+                stroke-opacity: 0.55;
+            }
+        }
+
+        @keyframes scanGlobe {
+            0% { transform: translateY(-80px); opacity: 0; }
+            15% { opacity: 1; }
+            85% { opacity: 1; }
+            100% { transform: translateY(80px); opacity: 0; }
+        }
+
+        @keyframes pulseGlobe {
+            0% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(255, 51, 51, 0.4)); }
+            50% { transform: scale(1.06); filter: drop-shadow(0 0 22px rgba(255, 51, 51, 0.7)); }
+            100% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(255, 51, 51, 0.4)); }
+        }
+
+        @keyframes drawText {
+            80% {
+                stroke-dashoffset: 0;
+                fill: rgba(255, 51, 51, 0);
+                filter: drop-shadow(0 0 2px rgba(255, 51, 51, 0.5));
+            }
+            100% {
+                stroke-dashoffset: 0;
+                fill: rgba(255, 51, 51, 0.15);
+                filter: drop-shadow(0 0 12px rgba(255, 51, 51, 0.8));
+            }
+        }
+
+        @keyframes showLogLine {
+            to { opacity: 1; }
+        }
     </style>
 </head>
 <body>
+
+    <div id="splash-screen">
+        <div class="globe-container globe-pulse">
+            <svg class="retro-globe" width="160" height="160" viewBox="0 0 200 200">
+                <defs>
+                    <clipPath id="globe-clip">
+                        <circle cx="100" cy="100" r="80" />
+                    </clipPath>
+                </defs>
+                <circle cx="100" cy="100" r="90" class="globe-ring" />
+                <circle cx="100" cy="100" r="80" class="globe-outline" />
+                <g class="globe-grid" transform="rotate(-15 100 100)">
+                    <line x1="20" y1="100" x2="180" y2="100" class="globe-line equator" />
+                    <ellipse cx="100" cy="70" rx="74" ry="14" class="globe-line latitude" />
+                    <ellipse cx="100" cy="45" rx="55" ry="10" class="globe-line latitude" />
+                    <ellipse cx="100" cy="130" rx="74" ry="14" class="globe-line latitude" />
+                    <ellipse cx="100" cy="155" rx="55" ry="10" class="globe-line latitude" />
+                    <ellipse cx="100" cy="100" rx="80" ry="80" class="globe-line longitude lon-1" />
+                    <ellipse cx="100" cy="100" rx="80" ry="80" class="globe-line longitude lon-2" />
+                    <ellipse cx="100" cy="100" rx="80" ry="80" class="globe-line longitude lon-3" />
+                    <ellipse cx="100" cy="100" rx="80" ry="80" class="globe-line longitude lon-4" />
+                </g>
+                <line x1="0" y1="100" x2="200" y2="100" class="scan-line" clip-path="url(#globe-clip)" />
+            </svg>
+        </div>
+        <svg class="webgis-logo" width="300" height="80" viewBox="0 0 300 80">
+            <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" class="logo-text">WEBGIS</text>
+        </svg>
+        <div id="splash-logs"></div>
+    </div>
 
     <div id="sidebar">
         <h2>Filter Properties</h2>
@@ -232,6 +451,45 @@
         let currentPois = [];
         let activePoiId = null;
         let activeInfoWindow = null;
+
+        // Splash screen state and logs configuration
+        let isMapReady = false;
+        let isMinDelayPassed = false;
+        const LOGS = [
+            'System boot initiated...',
+            'Connecting to spatial database...',
+            'Establishing spatial R-tree index...',
+            'Sydney viewport buffer loaded.',
+            'Ready.'
+        ];
+
+        function startSplashLogs() {
+            const logsContainer = document.getElementById('splash-logs');
+            if (!logsContainer) return;
+            let logIndex = 0;
+
+            function addLog() {
+                if (logIndex >= LOGS.length) return;
+                const line = document.createElement('div');
+                line.className = 'log-line';
+                line.innerHTML = `> ${LOGS[logIndex]}`;
+                logsContainer.appendChild(line);
+                logIndex++;
+                setTimeout(addLog, 450);
+            }
+
+            setTimeout(addLog, 200);
+        }
+
+        function dismissSplashScreen() {
+            if (isMapReady && isMinDelayPassed) {
+                const splash = document.getElementById('splash-screen');
+                if (splash) {
+                    splash.classList.add('fade-out');
+                    setTimeout(() => splash.remove(), 800); // Clean up DOM after fade
+                }
+            }
+        }
 
         // Dark red cyberpunk map styling
         const mapStyle = [
@@ -306,6 +564,8 @@
                     clusterScript.onload = () => {
                         window.initMap = () => {
                             setupMap();
+                            isMapReady = true;
+                            dismissSplashScreen();
                             resolve();
                         };
 
@@ -326,6 +586,13 @@
         }
 
         loadGoogleMaps();
+
+        // Initialize splash screen sequence
+        startSplashLogs();
+        setTimeout(() => {
+            isMinDelayPassed = true;
+            dismissSplashScreen();
+        }, 2800);
 
         async function fetchPOIs() {
             if (!map) return;
