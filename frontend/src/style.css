@@ -1,0 +1,447 @@
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+* {
+  box-sizing: border-box;
+  font-family: 'Share Tech Mono', 'Courier New', Courier, monospace;
+}
+
+body,
+html {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  background: #050202;
+}
+
+/* Custom scrollbar for sidebar */
+#sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+#sidebar::-webkit-scrollbar-track {
+  background: #0f0505;
+}
+#sidebar::-webkit-scrollbar-thumb {
+  background: #551111;
+  border-radius: 2px;
+}
+#sidebar::-webkit-scrollbar-thumb:hover {
+  background: #990000;
+}
+
+#sidebar {
+  width: 320px;
+  flex-shrink: 0;
+  background: #140505;
+  color: #ff9999;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  border-right: 2px solid #800000;
+  box-shadow: 5px 0 15px rgba(255, 0, 0, 0.15);
+  z-index: 10;
+  overflow-y: auto;
+}
+#map-container {
+  flex: 1;
+  height: 100%;
+  min-width: 0;
+  position: relative;
+  background: #050202;
+}
+#map {
+  width: 100%;
+  height: 100%;
+}
+#map-loader {
+  position: absolute;
+  top: 20px;
+  right: 80px;
+  background: #140505;
+  border: 1px solid #ff3333;
+  color: #ff3333;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  z-index: 1000;
+  box-shadow: 0 0 10px rgba(255, 51, 51, 0.5);
+  display: none;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.terminal-loader {
+  color: #ff3333;
+  text-align: center;
+  padding: 40px 20px;
+  text-shadow: 0 0 5px rgba(255, 51, 51, 0.5);
+  letter-spacing: 1.2px;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+}
+.terminal-loader::after {
+  content: '/';
+  display: inline-block;
+  animation: rotateSpinner 0.8s infinite steps(4);
+  margin-left: 8px;
+}
+@keyframes rotateSpinner {
+  0% {
+    content: '/';
+  }
+  25% {
+    content: '-';
+  }
+  50% {
+    content: '\\';
+  }
+  75% {
+    content: '|';
+  }
+}
+
+h2,
+h3 {
+  margin: 0;
+  color: #ff3333;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  text-shadow: 0 0 5px rgba(255, 51, 51, 0.4);
+}
+
+h2 {
+  font-size: 1.5rem;
+  border-bottom: 2px solid #800000;
+  padding-bottom: 10px;
+}
+h3 {
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+label {
+  font-size: 0.9rem;
+  color: #b36666;
+  text-transform: uppercase;
+}
+
+input,
+button {
+  padding: 12px;
+  border-radius: 2px;
+  border: 1px solid #800000;
+  background: #240a0a;
+  color: #ffb3b3;
+  font-size: 1rem;
+  transition: all 0.2s ease-in-out;
+}
+
+input:focus {
+  outline: none;
+  border-color: #ff3333;
+  box-shadow: 0 0 10px rgba(255, 51, 51, 0.6);
+  background: #2e0d0d;
+}
+
+button {
+  background: #990000;
+  color: white;
+  cursor: pointer;
+  font-weight: bold;
+  text-transform: uppercase;
+  border: 1px solid #ff3333;
+  letter-spacing: 1px;
+  box-shadow: 0 0 5px rgba(255, 0, 0, 0.2);
+}
+
+button:hover {
+  background: #ff3333;
+  box-shadow: 0 0 12px rgba(255, 51, 51, 0.8);
+  text-shadow: 0 0 3px rgba(255, 255, 255, 0.8);
+}
+
+.poi-item {
+  background: #1c0606;
+  padding: 12px;
+  border-radius: 2px;
+  margin-bottom: 10px;
+  border: 1px solid #471414;
+  border-left: 4px solid #ff3333;
+  transition: all 0.2s ease;
+}
+
+.poi-item:hover {
+  border-color: #ff3333;
+  background: #2d0a0a;
+  transform: translateX(3px);
+  box-shadow: 0 0 8px rgba(255, 51, 51, 0.3);
+}
+
+#map-loader::after {
+  content: '/';
+  display: inline-block;
+  animation: rotateSpinner 0.8s infinite steps(4);
+  margin-left: 8px;
+}
+
+#map-overflow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(20, 5, 5, 0.9);
+  border: 2px dashed #ff3333;
+  color: #ff3333;
+  padding: 20px 30px;
+  font-size: 1.1rem;
+  z-index: 1000;
+  box-shadow: 0 0 25px rgba(255, 51, 51, 0.4);
+  display: none;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  pointer-events: none;
+  animation: pulseGlow 2s infinite ease-in-out;
+}
+
+@keyframes pulseGlow {
+  0% {
+    box-shadow: 0 0 15px rgba(255, 51, 51, 0.3);
+    border-color: #990000;
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(255, 51, 51, 0.6);
+    border-color: #ff3333;
+  }
+  100% {
+    box-shadow: 0 0 15px rgba(255, 51, 51, 0.3);
+    border-color: #990000;
+  }
+}
+
+/* Splash Screen Overlay */
+#splash-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #070202;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 25px;
+  transition: opacity 0.8s ease-in-out, visibility 0.8s ease-in-out;
+  opacity: 1;
+  visibility: visible;
+}
+
+#splash-screen.fade-out {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.globe-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 180px;
+  height: 180px;
+}
+
+.globe-pulse {
+  animation: pulseGlobe 2.5s ease-in-out infinite;
+}
+
+.retro-globe {
+  width: 100%;
+  height: 100%;
+}
+
+.globe-ring {
+  fill: none;
+  stroke: #ff3333;
+  stroke-width: 0.75;
+  stroke-opacity: 0.35;
+  stroke-dasharray: 4 6;
+  animation: spinRing 24s linear infinite;
+  transform-origin: 100px 100px;
+}
+
+.globe-outline {
+  fill: none;
+  stroke: #ff3333;
+  stroke-width: 2.2;
+  stroke-opacity: 0.9;
+}
+
+.globe-grid {
+  transform: rotate(-15deg);
+  transform-origin: 100px 100px;
+}
+
+.globe-line {
+  fill: none;
+  stroke: #ff3333;
+  stroke-width: 1;
+  stroke-opacity: 0.45;
+}
+
+.globe-line.equator {
+  stroke-width: 1.2;
+  stroke-opacity: 0.6;
+}
+
+.longitude {
+  transform-origin: 100px 100px;
+  animation: spinLongitude 6s linear infinite;
+}
+
+.lon-1 {
+  animation-delay: 0s;
+}
+.lon-2 {
+  animation-delay: -1.5s;
+}
+.lon-3 {
+  animation-delay: -3s;
+}
+.lon-4 {
+  animation-delay: -4.5s;
+}
+
+.scan-line {
+  stroke: #ff3333;
+  stroke-width: 1.5;
+  stroke-opacity: 0.85;
+  transform-origin: 100px 100px;
+  animation: scanGlobe 4s ease-in-out infinite;
+}
+
+.webgis-logo {
+  margin-top: 10px;
+}
+
+.logo-text {
+  fill: none;
+  stroke: #ff3333;
+  stroke-width: 1.5;
+  stroke-dasharray: 500;
+  stroke-dashoffset: 500;
+  animation: drawText 2.2s ease-in-out forwards;
+  font-size: 3.5rem;
+  font-weight: bold;
+  letter-spacing: 8px;
+  font-family: 'Share Tech Mono', Courier New, monospace;
+}
+
+#splash-logs {
+  width: 350px;
+  height: 110px;
+  font-family: 'Share Tech Mono', monospace;
+  color: #ff6666;
+  font-size: 0.85rem;
+  text-align: left;
+  padding: 10px;
+  border-left: 2px solid #800000;
+  background: rgba(20, 5, 5, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-transform: uppercase;
+}
+
+.log-line {
+  opacity: 0;
+  animation: showLogLine 0.2s forwards;
+  letter-spacing: 1px;
+}
+
+@keyframes spinRing {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spinLongitude {
+  0% {
+    transform: scaleX(1);
+    stroke-opacity: 0.55;
+  }
+  25% {
+    stroke-opacity: 0.25;
+  }
+  50% {
+    transform: scaleX(-1);
+    stroke-opacity: 0.55;
+  }
+  75% {
+    stroke-opacity: 0.25;
+  }
+  100% {
+    transform: scaleX(1);
+    stroke-opacity: 0.55;
+  }
+}
+
+@keyframes scanGlobe {
+  0% {
+    transform: translateY(-80px);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(80px);
+    opacity: 0;
+  }
+}
+
+@keyframes pulseGlobe {
+  0% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 8px rgba(255, 51, 51, 0.4));
+  }
+  50% {
+    transform: scale(1.06);
+    filter: drop-shadow(0 0 22px rgba(255, 51, 51, 0.7));
+  }
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 8px rgba(255, 51, 51, 0.4));
+  }
+}
+
+@keyframes drawText {
+  80% {
+    stroke-dashoffset: 0;
+    fill: rgba(255, 51, 51, 0);
+    filter: drop-shadow(0 0 2px rgba(255, 51, 51, 0.5));
+  }
+  100% {
+    stroke-dashoffset: 0;
+    fill: rgba(255, 51, 51, 0.15);
+    filter: drop-shadow(0 0 12px rgba(255, 51, 51, 0.8));
+  }
+}
+
+@keyframes showLogLine {
+  to {
+    opacity: 1;
+  }
+}
