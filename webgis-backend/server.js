@@ -36,7 +36,13 @@ app.get('/api/pois', async (req, res) => {
         // MySQL SRID 4326 expects WKT as (latitude longitude), not (lng lat)
         const wktEnvelope = `POLYGON((${south} ${west}, ${south} ${east}, ${north} ${east}, ${north} ${west}, ${south} ${west}))`;
 
-        let query = `
+        let countQuery = `
+            SELECT COUNT(*) AS total
+            FROM points_of_interest
+            WHERE ST_Within(location, ST_GeomFromText(?, 4326))
+        `;
+
+        let dataQuery = `
             SELECT
                 id, name, price, property_type,
                 ST_X(location) AS lat,
@@ -45,19 +51,37 @@ app.get('/api/pois', async (req, res) => {
             WHERE ST_Within(location, ST_GeomFromText(?, 4326))
         `;
 
-        const queryParams = [wktEnvelope];
+        const countParams = [wktEnvelope];
+        const dataParams = [wktEnvelope];
+        let priceFilter = '';
 
         if (minPrice) {
-            query += ' AND price >= ?';
-            queryParams.push(Number(minPrice));
+            priceFilter += ' AND price >= ?';
+            countParams.push(Number(minPrice));
+            dataParams.push(Number(minPrice));
         }
         if (maxPrice) {
-            query += ' AND price <= ?';
-            queryParams.push(Number(maxPrice));
+            priceFilter += ' AND price <= ?';
+            countParams.push(Number(maxPrice));
+            dataParams.push(Number(maxPrice));
         }
 
-        const [rows] = await pool.query(query, queryParams);
-        res.json(rows);
+        countQuery += priceFilter;
+        dataQuery += priceFilter;
+        dataQuery += ' LIMIT 500';
+
+        const [[countResult], [dataResult]] = await Promise.all([
+            pool.query(countQuery, countParams),
+            pool.query(dataQuery, dataParams)
+        ]);
+
+        const total = countResult[0].total;
+
+        res.json({
+            total,
+            limit: 500,
+            results: dataResult
+        });
     } catch (error) {
         console.error('Database error:', error);
         res.status(500).json({ error: 'Internal server error' });

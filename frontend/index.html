@@ -66,8 +66,8 @@
 
         function setupMap() {
             map = new google.maps.Map(document.getElementById('map'), {
-                center: { lat: 37.7749, lng: -122.4194 },
-                zoom: 13,
+                center: { lat: -33.8688, lng: 151.2093 },
+                zoom: 11,
                 mapTypeId: 'roadmap'
             });
 
@@ -130,7 +130,7 @@
                 const response = await fetch(url);
                 const data = await response.json();
 
-                updateMapMarkers(data);
+                updateMapMarkers(data.results || []);
                 updateSidebarList(data);
             } catch (err) {
                 console.error('Error updating WebGIS data layer:', err);
@@ -161,9 +161,22 @@
             });
         }
 
-        function updateSidebarList(pois) {
+        function updateSidebarList(data) {
             const listContainer = document.getElementById('poi-list');
             listContainer.innerHTML = '';
+
+            const pois = data.results || [];
+            const total = data.total || 0;
+            const limit = data.limit || 500;
+
+            const summaryHeader = document.querySelector('#listings-summary h3');
+            if (summaryHeader) {
+                if (total > limit) {
+                    summaryHeader.innerHTML = `Visible Listings <span style="font-size: 0.8rem; color: #f1c40f;">(Showing ${limit} of ${total.toLocaleString()})</span>`;
+                } else {
+                    summaryHeader.innerHTML = `Visible Listings <span style="font-size: 0.8rem; color: #2ecc71;">(${total.toLocaleString()} found)</span>`;
+                }
+            }
 
             if (pois.length === 0) {
                 listContainer.innerHTML = '<p style="color:#bdc3c7;">No properties in this view window.</p>';
