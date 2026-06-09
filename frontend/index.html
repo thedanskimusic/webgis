@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGIS Demo - Real Estate Map</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body, html { margin: 0; padding: 0; height: 100%; display: flex; }
+
+        #sidebar {
+            width: 320px;
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+        #map { flex-grow: 1; height: 100%; }
+
+        .filter-group { display: flex; flex-direction: column; gap: 8px; }
+        label { font-size: 0.9rem; color: #bdc3c7; }
+        input, button { padding: 10px; border-radius: 4px; border: none; }
+        button { background: #3498db; color: white; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        button:hover { background: #2980b9; }
+
+        .poi-item {
+            background: #34495e;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            border-left: 4px solid #3498db;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <h2>Filter Properties</h2>
+        <div class="filter-group">
+            <label for="minPrice">Min Price ($)</label>
+            <input type="number" id="minPrice" value="0">
+        </div>
+        <div class="filter-group">
+            <label for="maxPrice">Max Price ($)</label>
+            <input type="number" id="maxPrice" value="1000000">
+        </div>
+        <button id="applyFilters">Apply Filters</button>
+        <hr style="width:100%; border-color:#455a64;">
+        <div id="listings-summary">
+            <h3>Visible Listings</h3>
+            <div id="poi-list">Move the map to load items...</div>
+        </div>
+    </div>
+
+    <div id="map"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000';
+        let map;
+        let markers = [];
+
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: 37.7749, lng: -122.4194 },
+                zoom: 13,
+                mapTypeId: 'roadmap'
+            });
+
+            map.addListener('idle', fetchPOIs);
+            document.getElementById('applyFilters').addEventListener('click', fetchPOIs);
+        }
+
+        function showError(message) {
+            document.getElementById('poi-list').innerHTML =
+                `<p style="color:#e74c3c;">${message}</p>`;
+        }
+
+        async function loadGoogleMaps() {
+            try {
+                const response = await fetch(`${API_BASE}/api/config`);
+                const config = await response.json();
+
+                if (!response.ok) {
+                    showError(config.error || 'Failed to load map configuration.');
+                    return;
+                }
+
+                await new Promise((resolve, reject) => {
+                    window.initMap = () => {
+                        initMap();
+                        resolve();
+                    };
+
+                    const script = document.createElement('script');
+                    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(config.googleMapsApiKey)}&callback=initMap`;
+                    script.async = true;
+                    script.defer = true;
+                    script.onerror = () => reject(new Error('Failed to load Google Maps script'));
+                    document.head.appendChild(script);
+                });
+            } catch (err) {
+                console.error('Error loading Google Maps:', err);
+                showError('Could not load the map. Is the backend running with GOOGLE_MAPS_API_KEY set?');
+            }
+        }
+
+        loadGoogleMaps();
+
+        async function fetchPOIs() {
+            if (!map) return;
+
+            const bounds = map.getBounds();
+            if (!bounds) return;
+
+            const ne = bounds.getNorthEast();
+            const sw = bounds.getSouthWest();
+            const minPrice = document.getElementById('minPrice').value;
+            const maxPrice = document.getElementById('maxPrice').value;
+
+            const url = `${API_BASE}/api/pois?` +
+                        `west=${sw.lng()}&east=${ne.lng()}&south=${sw.lat()}&north=${ne.lat()}` +
+                        `&minPrice=${minPrice}&maxPrice=${maxPrice}`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+
+                updateMapMarkers(data);
+                updateSidebarList(data);
+            } catch (err) {
+                console.error('Error updating WebGIS data layer:', err);
+            }
+        }
+
+        function updateMapMarkers(pois) {
+            markers.forEach(marker => marker.setMap(null));
+            markers = [];
+
+            pois.forEach(poi => {
+                const marker = new google.maps.Marker({
+                    position: { lat: Number(poi.lat), lng: Number(poi.lng) },
+                    map: map,
+                    title: poi.name,
+                    label: `$${(poi.price / 1000).toFixed(0)}k`
+                });
+
+                const infoWindow = new google.maps.InfoWindow({
+                    content: `<strong>${poi.name}</strong><br>Price: $${poi.price.toLocaleString()}<br>Type: ${poi.property_type}`
+                });
+
+                marker.addListener('click', () => {
+                    infoWindow.open(map, marker);
+                });
+
+                markers.push(marker);
+            });
+        }
+
+        function updateSidebarList(pois) {
+            const listContainer = document.getElementById('poi-list');
+            listContainer.innerHTML = '';
+
+            if (pois.length === 0) {
+                listContainer.innerHTML = '<p style="color:#bdc3c7;">No properties in this view window.</p>';
+                return;
+            }
+
+            pois.forEach(poi => {
+                const item = document.createElement('div');
+                item.className = 'poi-item';
+                item.innerHTML = `<strong>${poi.name}</strong><br>$${poi.price.toLocaleString()} (${poi.property_type})`;
+                listContainer.appendChild(item);
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: webgis-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: webgis_root
+      MYSQL_DATABASE: webgis_demo
+    ports:
+      - "3306:3306"
+    volumes:
+      - webgis_mysql_data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+volumes:
+  webgis_mysql_data:
