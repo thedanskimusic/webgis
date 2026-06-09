@@ -12,7 +12,7 @@ const pool = mysql.createPool({
   connectionLimit: 10
 });
 
-interface Property {
+export interface Property {
   name: string;
   price: number;
   propertyType: string;
@@ -20,18 +20,21 @@ interface Property {
   lng: number;
 }
 
-function generatePoint(): Property {
-  const rand = Math.random();
+// Helper 1: NSW Demographic Distribution (Sydney, Newcastle, Canberra, Wollongong, coastal regional bias)
+export function generateCoordinates(rand: number): {
+  lat: number;
+  lng: number;
+} {
   let lat = 0;
   let lng = 0;
 
-  if (rand < 0.40) {
+  if (rand < 0.4) {
     // Sydney Metro (40%)
     const r = Math.random() * 0.25;
     const theta = Math.random() * 2 * Math.PI;
     lat = -33.8688 + r * Math.sin(theta);
     lng = 151.2093 + r * Math.cos(theta);
-  } else if (rand < 0.50) {
+  } else if (rand < 0.5) {
     // Newcastle Metro (10%)
     const r = Math.random() * 0.12;
     const theta = Math.random() * 2 * Math.PI;
@@ -43,12 +46,12 @@ function generatePoint(): Property {
     const theta = Math.random() * 2 * Math.PI;
     lat = -34.4278 + r * Math.sin(theta);
     lng = 150.8931 + r * Math.cos(theta);
-  } else if (rand < 0.60) {
+  } else if (rand < 0.6) {
     // Canberra Metro (5%)
     const r = Math.random() * 0.08;
     const theta = Math.random() * 2 * Math.PI;
     lat = -35.2809 + r * Math.sin(theta);
-    lng = 149.1300 + r * Math.cos(theta);
+    lng = 149.13 + r * Math.cos(theta);
   } else {
     // Rest of NSW (40%), weighted towards the coast
     lat = -37.5 + Math.random() * (37.5 - 28.2);
@@ -62,21 +65,60 @@ function generatePoint(): Property {
     lng = min_lng + (max_lng - min_lng) * bias;
   }
 
-  // Pick property type
+  return { lat, lng };
+}
+
+// Helper 2: Randomly generates real-estate style names and type categories
+export function generatePropertyNameAndType(): {
+  name: string;
+  propertyType: string;
+} {
   const types = ['house', 'apartment', 'condo'];
   const propertyType = types[Math.floor(Math.random() * types.length)];
 
-  // Pick name
-  const adjectives = ['Beautiful', 'Spacious', 'Modern', 'Cozy', 'Stunning', 'Charming', 'Elegant', 'Sunlit', 'Quiet', 'Luxury'];
-  const nouns = ['Family Home', 'Apartment', 'Studio', 'Condo', 'Townhouse', 'Terrace', 'Villa', 'Penthouse', 'Cottage', 'Residence'];
+  const adjectives = [
+    'Beautiful',
+    'Spacious',
+    'Modern',
+    'Cozy',
+    'Stunning',
+    'Charming',
+    'Elegant',
+    'Sunlit',
+    'Quiet',
+    'Luxury'
+  ];
+  const nouns = [
+    'Family Home',
+    'Apartment',
+    'Studio',
+    'Condo',
+    'Townhouse',
+    'Terrace',
+    'Villa',
+    'Penthouse',
+    'Cottage',
+    'Residence'
+  ];
   const name = `${adjectives[Math.floor(Math.random() * adjectives.length)]} ${nouns[Math.floor(Math.random() * nouns.length)]}`;
 
-  // Price calculation
+  return { name, propertyType };
+}
+
+// Helper 3: Generates realistic price distribution (with Sydney metro price premiums)
+export function generatePropertyPrice(rand: number): number {
   let priceBase = 300000 + Math.random() * 1200000;
-  if (rand < 0.40) {
+  if (rand < 0.4) {
     priceBase += 400000 + Math.random() * 1000000; // Sydney premium
   }
-  const price = Math.round(priceBase / 5000) * 5000;
+  return Math.round(priceBase / 5000) * 5000;
+}
+
+export function generatePoint(): Property {
+  const rand = Math.random();
+  const { lat, lng } = generateCoordinates(rand);
+  const { name, propertyType } = generatePropertyNameAndType();
+  const price = generatePropertyPrice(rand);
 
   return { name, price, propertyType, lat, lng };
 }
@@ -94,18 +136,26 @@ async function run() {
     const batchSize = 10000;
     const numBatches = totalRecords / batchSize;
 
-    console.log(`Starting generation & insertion of ${totalRecords.toLocaleString()} records...`);
+    console.log(
+      `Starting generation & insertion of ${totalRecords.toLocaleString()} records...`
+    );
     const startTime = Date.now();
 
     for (let batch = 0; batch < numBatches; batch++) {
-      let sql = 'INSERT INTO points_of_interest (name, price, property_type, location) VALUES ';
+      let sql =
+        'INSERT INTO points_of_interest (name, price, property_type, location) VALUES ';
       const values: (string | number)[] = [];
       const placeholders: string[] = [];
 
       for (let i = 0; i < batchSize; i++) {
         const p = generatePoint();
         placeholders.push('(?, ?, ?, ST_GeomFromText(?, 4326))');
-        values.push(p.name, p.price, p.propertyType, `POINT(${p.lat} ${p.lng})`);
+        values.push(
+          p.name,
+          p.price,
+          p.propertyType,
+          `POINT(${p.lat} ${p.lng})`
+        );
       }
 
       sql += placeholders.join(', ');
@@ -114,15 +164,18 @@ async function run() {
       if ((batch + 1) % 10 === 0 || batch === numBatches - 1) {
         const count = (batch + 1) * batchSize;
         const elapsed = (Date.now() - startTime) / 1000;
-        const progressPercent = ((batch + 1) / numBatches * 100).toFixed(0);
+        const progressPercent = (((batch + 1) / numBatches) * 100).toFixed(0);
         const rate = Math.round(count / elapsed);
-        console.log(`Progress: ${count.toLocaleString()} / ${totalRecords.toLocaleString()} (${progressPercent}%) - Time elapsed: ${elapsed.toFixed(1)}s - Rate: ${rate.toLocaleString()} rows/s`);
+        console.log(
+          `Progress: ${count.toLocaleString()} / ${totalRecords.toLocaleString()} (${progressPercent}%) - Time elapsed: ${elapsed.toFixed(1)}s - Rate: ${rate.toLocaleString()} rows/s`
+        );
       }
     }
 
     const totalTime = (Date.now() - startTime) / 1000;
-    console.log(`Successfully completed seeding in ${totalTime.toFixed(2)} seconds!`);
-
+    console.log(
+      `Successfully completed seeding in ${totalTime.toFixed(2)} seconds!`
+    );
   } catch (err) {
     console.error('Error during seeding:', err);
   } finally {
@@ -131,4 +184,7 @@ async function run() {
   }
 }
 
-run();
+// Run if called directly (not when imported for testing helper functions)
+if (require.main === module) {
+  run();
+}
