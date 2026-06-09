@@ -104,11 +104,19 @@ npm start
 
 #### Run the Frontend
 
-The frontend must be served locally (rather than opened directly from the filesystem). Run a local web server:
+To run the frontend in development mode with hot-reloading:
 
 ```bash
 cd ../frontend
-python3 -m http.server 8080
+npm install
+npm run dev
+```
+
+For production deployment, you can compile and bundle the frontend:
+
+```bash
+npm run build
+npm run preview
 ```
 
 Open `http://localhost:8080` in your web browser. You will see the retro cyberpunk boot splash screen play while the system initializes the Sydney maps view.
