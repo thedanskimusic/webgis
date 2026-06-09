@@ -39,8 +39,8 @@ app.get('/api/pois', async (req, res) => {
         let query = `
             SELECT
                 id, name, price, property_type,
-                ST_X(location) AS lng,
-                ST_Y(location) AS lat
+                ST_X(location) AS lat,
+                ST_Y(location) AS lng
             FROM points_of_interest
             WHERE ST_Within(location, ST_GeomFromText(?, 4326))
         `;
