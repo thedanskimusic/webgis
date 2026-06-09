@@ -5,35 +5,121 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebGIS Demo - Real Estate Map</title>
     <style>
-        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; display: flex; }
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+        * { 
+            box-sizing: border-box; 
+            font-family: 'Share Tech Mono', 'Courier New', Courier, monospace; 
+        }
+        
+        body, html { 
+            margin: 0; 
+            padding: 0; 
+            height: 100%; 
+            width: 100%; 
+            display: flex; 
+            background: #050202; 
+        }
+
+        /* Custom scrollbar for sidebar */
+        #sidebar::-webkit-scrollbar {
+            width: 8px;
+        }
+        #sidebar::-webkit-scrollbar-track {
+            background: #0f0505;
+        }
+        #sidebar::-webkit-scrollbar-thumb {
+            background: #551111;
+            border-radius: 2px;
+        }
+        #sidebar::-webkit-scrollbar-thumb:hover {
+            background: #990000;
+        }
 
         #sidebar {
             width: 320px;
             flex-shrink: 0;
-            background: #2c3e50;
-            color: white;
+            background: #140505;
+            color: #ff9999;
             padding: 20px;
             display: flex;
             flex-direction: column;
             gap: 20px;
-            box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+            border-right: 2px solid #800000;
+            box-shadow: 5px 0 15px rgba(255, 0, 0, 0.15);
             z-index: 10;
+            overflow-y: auto;
         }
-        #map { flex: 1; height: 100%; min-width: 0; }
+        #map { 
+            flex: 1; 
+            height: 100%; 
+            min-width: 0; 
+            background: #050202;
+        }
+
+        h2, h3 { 
+            margin: 0; 
+            color: #ff3333; 
+            text-transform: uppercase; 
+            letter-spacing: 1.5px;
+            text-shadow: 0 0 5px rgba(255, 51, 51, 0.4);
+        }
+
+        h2 { font-size: 1.5rem; border-bottom: 2px solid #800000; padding-bottom: 10px; }
+        h3 { font-size: 1.1rem; margin-bottom: 15px; }
 
         .filter-group { display: flex; flex-direction: column; gap: 8px; }
-        label { font-size: 0.9rem; color: #bdc3c7; }
-        input, button { padding: 10px; border-radius: 4px; border: none; }
-        button { background: #3498db; color: white; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        button:hover { background: #2980b9; }
+        label { font-size: 0.9rem; color: #b36666; text-transform: uppercase; }
+        
+        input, button { 
+            padding: 12px; 
+            border-radius: 2px; 
+            border: 1px solid #800000; 
+            background: #240a0a;
+            color: #ffb3b3;
+            font-size: 1rem;
+            transition: all 0.2s ease-in-out;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #ff3333;
+            box-shadow: 0 0 10px rgba(255, 51, 51, 0.6);
+            background: #2e0d0d;
+        }
+
+        button { 
+            background: #990000; 
+            color: white; 
+            cursor: pointer; 
+            font-weight: bold; 
+            text-transform: uppercase;
+            border: 1px solid #ff3333;
+            letter-spacing: 1px;
+            box-shadow: 0 0 5px rgba(255, 0, 0, 0.2);
+        }
+
+        button:hover { 
+            background: #ff3333; 
+            box-shadow: 0 0 12px rgba(255, 51, 51, 0.8);
+            text-shadow: 0 0 3px rgba(255, 255, 255, 0.8);
+        }
 
         .poi-item {
-            background: #34495e;
+            background: #1c0606;
             padding: 12px;
-            border-radius: 4px;
+            border-radius: 2px;
             margin-bottom: 10px;
-            border-left: 4px solid #3498db;
+            border: 1px solid #471414;
+            border-left: 4px solid #ff3333;
+            transition: all 0.2s ease;
+        }
+
+        .poi-item:hover {
+            border-color: #ff3333;
+            background: #2d0a0a;
+            transform: translateX(3px);
+            box-shadow: 0 0 8px rgba(255, 51, 51, 0.3);
         }
     </style>
 </head>
@@ -43,11 +129,11 @@
         <h2>Filter Properties</h2>
         <div class="filter-group">
             <label for="minPrice">Min Price ($)</label>
-            <input type="number" id="minPrice" value="0">
+            <input type="text" id="minPrice" value="0">
         </div>
         <div class="filter-group">
             <label for="maxPrice">Max Price ($)</label>
-            <input type="number" id="maxPrice" value="1000000">
+            <input type="text" id="maxPrice" value="1,000,000">
         </div>
         <button id="applyFilters">Apply Filters</button>
         <hr style="width:100%; border-color:#455a64;">
@@ -64,11 +150,53 @@
         let map;
         let markers = [];
 
+        // Dark red cyberpunk map styling
+        const mapStyle = [
+            { elementType: "geometry", stylers: [{ color: "#110404" }] },
+            { elementType: "labels.text.stroke", stylers: [{ color: "#110404" }, { weight: 2 }] },
+            { elementType: "labels.text.fill", stylers: [{ color: "#993333" }] },
+            { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#441111" }] },
+            { featureType: "landscape", elementType: "geometry", stylers: [{ color: "#1a0808" }] },
+            { featureType: "poi", elementType: "geometry", stylers: [{ color: "#1a0808" }] },
+            { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#993333" }] },
+            { featureType: "road", elementType: "geometry", stylers: [{ color: "#2d0d0d" }] },
+            { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#804040" }] },
+            { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#4a1212" }] },
+            { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#661111" }] },
+            { featureType: "transit", elementType: "geometry", stylers: [{ color: "#220808" }] },
+            { featureType: "water", elementType: "geometry", stylers: [{ color: "#050101" }] }
+        ];
+
+        // Glowing red circular SVG marker
+        const svgIcon = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+            <defs>
+                <radialGradient id="rg" cx="50%" cy="50%" r="50%" fx="30%" fy="30%">
+                    <stop offset="0%" style="stop-color:#990000;stop-opacity:1" />
+                    <stop offset="70%" style="stop-color:#3d0000;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#ff1a1a;stop-opacity:1" />
+                </radialGradient>
+                <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+                    <feGaussianBlur stdDeviation="3" result="blur" />
+                    <feComponentTransfer in="blur" result="brightBlur">
+                        <feFuncA type="linear" slope="1.5"/>
+                    </feComponentTransfer>
+                    <feMerge>
+                        <feMergeNode in="brightBlur" />
+                        <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                </filter>
+            </defs>
+            <circle cx="24" cy="24" r="18" fill="url(#rg)" stroke="#ff3333" stroke-width="2" filter="url(#glow)" />
+        </svg>
+        `;
+
         function setupMap() {
             map = new google.maps.Map(document.getElementById('map'), {
                 center: { lat: -33.8688, lng: 151.2093 },
                 zoom: 11,
-                mapTypeId: 'roadmap'
+                mapTypeId: 'roadmap',
+                styles: mapStyle
             });
 
             map.addListener('idle', fetchPOIs);
@@ -119,8 +247,9 @@
 
             const ne = bounds.getNorthEast();
             const sw = bounds.getSouthWest();
-            const minPrice = document.getElementById('minPrice').value;
-            const maxPrice = document.getElementById('maxPrice').value;
+            // Strip commas from inputs for backend query
+            const minPrice = document.getElementById('minPrice').value.replace(/,/g, '');
+            const maxPrice = document.getElementById('maxPrice').value.replace(/,/g, '');
 
             const url = `${API_BASE}/api/pois?` +
                         `west=${sw.lng()}&east=${ne.lng()}&south=${sw.lat()}&north=${ne.lat()}` +
@@ -141,16 +270,36 @@
             markers.forEach(marker => marker.setMap(null));
             markers = [];
 
+            const markerIcon = {
+                url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svgIcon),
+                scaledSize: new google.maps.Size(42, 42),
+                anchor: new google.maps.Point(21, 21),
+                labelOrigin: new google.maps.Point(21, 21)
+            };
+
             pois.forEach(poi => {
                 const marker = new google.maps.Marker({
                     position: { lat: Number(poi.lat), lng: Number(poi.lng) },
                     map: map,
+                    icon: markerIcon,
                     title: poi.name,
-                    label: `$${(poi.price / 1000).toFixed(0)}k`
+                    label: {
+                        text: `$${(poi.price / 1000).toFixed(0)}k`,
+                        color: '#ffffff',
+                        fontSize: '10px',
+                        fontWeight: 'bold',
+                        fontFamily: '"Share Tech Mono", Courier New, monospace'
+                    }
                 });
 
                 const infoWindow = new google.maps.InfoWindow({
-                    content: `<strong>${poi.name}</strong><br>Price: $${poi.price.toLocaleString()}<br>Type: ${poi.property_type}`
+                    content: `
+                    <div style="background: #140505; color: #ff9999; border: 1px solid #ff3333; padding: 10px; font-family: 'Share Tech Mono', monospace; font-size: 0.9rem; border-radius: 2px; box-shadow: 0 0 10px rgba(255, 51, 51, 0.5);">
+                        <strong style="color: #ff3333; font-size: 1rem; border-bottom: 1px solid #800000; display: block; margin-bottom: 5px; padding-bottom: 2px;">${poi.name}</strong>
+                        <div style="margin-bottom: 2px;">Price: <span style="color: #ffffff;">$${poi.price.toLocaleString()}</span></div>
+                        <div>Type: <span style="color: #ffffff; text-transform: uppercase;">${poi.property_type}</span></div>
+                    </div>
+                    `
                 });
 
                 marker.addListener('click', () => {
@@ -190,6 +339,20 @@
                 listContainer.appendChild(item);
             });
         }
+
+        // Setup comma-separated dynamic number formatting on input
+        function formatNumberInput(e) {
+            const input = e.target;
+            let val = input.value.replace(/[^0-9]/g, '');
+            if (val === '') {
+                input.value = '';
+                return;
+            }
+            input.value = Number(val).toLocaleString();
+        }
+
+        document.getElementById('minPrice').addEventListener('input', formatNumberInput);
+        document.getElementById('maxPrice').addEventListener('input', formatNumberInput);
     </script>
 </body>
 </html>
