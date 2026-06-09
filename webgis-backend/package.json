@@ -2,17 +2,37 @@
   "name": "webgis-backend",
   "version": "1.0.0",
   "description": "WebGIS demo API with MySQL spatial queries",
-  "main": "server.js",
+  "main": "dist/server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "tsx watch src/server.ts",
+    "build": "rimraf dist && tsc",
+    "start": "node dist/server.js",
+    "seed": "tsx src/seed.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
-  "keywords": ["webgis", "mysql", "spatial"],
+  "keywords": [
+    "webgis",
+    "mysql",
+    "spatial"
+  ],
   "license": "ISC",
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "mysql2": "^3.12.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.9.2",
+    "@types/supertest": "^7.2.0",
+    "prettier": "^3.8.4",
+    "rimraf": "^6.1.3",
+    "supertest": "^7.2.2",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
   }
 }
