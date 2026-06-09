@@ -68,7 +68,7 @@ app.get('/api/pois', async (req, res) => {
 
         countQuery += priceFilter;
         dataQuery += priceFilter;
-        dataQuery += ' LIMIT 500';
+        dataQuery += ' ORDER BY id LIMIT 2000';
 
         const [[countResult], [dataResult]] = await Promise.all([
             pool.query(countQuery, countParams),
@@ -79,7 +79,7 @@ app.get('/api/pois', async (req, res) => {
 
         res.json({
             total,
-            limit: 500,
+            limit: 2000,
             results: dataResult
         });
     } catch (error) {
