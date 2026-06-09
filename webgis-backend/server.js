@@ -36,50 +36,50 @@ app.get('/api/pois', async (req, res) => {
         // MySQL SRID 4326 expects WKT as (latitude longitude), not (lng lat)
         const wktEnvelope = `POLYGON((${south} ${west}, ${south} ${east}, ${north} ${east}, ${north} ${west}, ${south} ${west}))`;
 
-        let countQuery = `
-            SELECT COUNT(*) AS total
-            FROM points_of_interest
-            WHERE ST_Within(location, ST_GeomFromText(?, 4326))
-        `;
-
-        let dataQuery = `
+        let query = `
             SELECT
                 id, name, price, property_type,
                 ST_X(location) AS lat,
                 ST_Y(location) AS lng
             FROM points_of_interest
-            WHERE ST_Within(location, ST_GeomFromText(?, 4326))
+            WHERE MBRWithin(location, ST_GeomFromText(?, 4326))
         `;
 
-        const countParams = [wktEnvelope];
-        const dataParams = [wktEnvelope];
+        const queryParams = [wktEnvelope];
         let priceFilter = '';
 
         if (minPrice) {
             priceFilter += ' AND price >= ?';
-            countParams.push(Number(minPrice));
-            dataParams.push(Number(minPrice));
+            queryParams.push(Number(minPrice));
         }
         if (maxPrice) {
             priceFilter += ' AND price <= ?';
-            countParams.push(Number(maxPrice));
-            dataParams.push(Number(maxPrice));
+            queryParams.push(Number(maxPrice));
         }
 
-        countQuery += priceFilter;
-        dataQuery += priceFilter;
-        dataQuery += ' ORDER BY id LIMIT 2000';
+        query += priceFilter;
+        // Limit to 2001 so we can tell if the total count exceeded 2000
+        query += ' LIMIT 2001';
 
-        const [[countResult], [dataResult]] = await Promise.all([
-            pool.query(countQuery, countParams),
-            pool.query(dataQuery, dataParams)
-        ]);
+        const [rows] = await pool.query(query, queryParams);
 
-        const total = countResult[0].total;
+        const limit = 2000;
+        const exceeded = rows.length > limit;
+        
+        let dataResult = [];
+        let total = rows.length;
+
+        if (exceeded) {
+            dataResult = [];
+            total = 2001; // Marker that it is > 2000
+        } else {
+            dataResult = rows;
+        }
 
         res.json({
             total,
-            limit: 2000,
+            exceeded,
+            limit,
             results: dataResult
         });
     } catch (error) {

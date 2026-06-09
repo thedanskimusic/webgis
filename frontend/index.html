@@ -50,11 +50,53 @@
             z-index: 10;
             overflow-y: auto;
         }
-        #map { 
-            flex: 1; 
-            height: 100%; 
-            min-width: 0; 
+        #map-container {
+            flex: 1;
+            height: 100%;
+            min-width: 0;
+            position: relative;
             background: #050202;
+        }
+        #map { 
+            width: 100%; 
+            height: 100%; 
+        }
+        #map-loader {
+            position: absolute;
+            top: 20px;
+            right: 80px;
+            background: #140505;
+            border: 1px solid #ff3333;
+            color: #ff3333;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            z-index: 1000;
+            box-shadow: 0 0 10px rgba(255, 51, 51, 0.5);
+            display: none;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        .terminal-loader {
+            color: #ff3333;
+            text-align: center;
+            padding: 40px 20px;
+            text-shadow: 0 0 5px rgba(255, 51, 51, 0.5);
+            letter-spacing: 1.2px;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+        }
+        .terminal-loader::after {
+            content: "/";
+            display: inline-block;
+            animation: rotateSpinner 0.8s infinite steps(4);
+            margin-left: 8px;
+        }
+        @keyframes rotateSpinner {
+            0% { content: "/"; }
+            25% { content: "-"; }
+            50% { content: "\\"; }
+            75% { content: "|"; }
         }
 
         h2, h3 { 
@@ -121,6 +163,39 @@
             transform: translateX(3px);
             box-shadow: 0 0 8px rgba(255, 51, 51, 0.3);
         }
+
+        #map-loader::after {
+            content: "/";
+            display: inline-block;
+            animation: rotateSpinner 0.8s infinite steps(4);
+            margin-left: 8px;
+        }
+
+        #map-overflow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(20, 5, 5, 0.9);
+            border: 2px dashed #ff3333;
+            color: #ff3333;
+            padding: 20px 30px;
+            font-size: 1.1rem;
+            z-index: 1000;
+            box-shadow: 0 0 25px rgba(255, 51, 51, 0.4);
+            display: none;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            pointer-events: none;
+            animation: pulseGlow 2s infinite ease-in-out;
+        }
+
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 15px rgba(255, 51, 51, 0.3); border-color: #990000; }
+            50% { box-shadow: 0 0 30px rgba(255, 51, 51, 0.6); border-color: #ff3333; }
+            100% { box-shadow: 0 0 15px rgba(255, 51, 51, 0.3); border-color: #990000; }
+        }
     </style>
 </head>
 <body>
@@ -143,7 +218,11 @@
         </div>
     </div>
 
-    <div id="map"></div>
+    <div id="map-container">
+        <div id="map-loader">[ SCANNING DATABASE ]</div>
+        <div id="map-overflow">[ SYSTEM OVERFLOW: 2,000+ PROPERTIES FOUND. PLEASE ZOOM IN OR FILTER PRICE. ]</div>
+        <div id="map"></div>
+    </div>
 
     <script>
         const API_BASE = 'http://localhost:3000';
@@ -262,14 +341,28 @@
                         `west=${sw.lng()}&east=${ne.lng()}&south=${sw.lat()}&north=${ne.lat()}` +
                         `&minPrice=${minPrice}&maxPrice=${maxPrice}`;
 
+            // Show terminal scanning indicators
+            document.getElementById('map-loader').style.display = 'block';
+            document.getElementById('poi-list').innerHTML = '<div class="terminal-loader">SCANNING GEOGRAPHIC VIEWPORT</div>';
+
             try {
                 const response = await fetch(url);
                 const data = await response.json();
 
-                updateMapMarkers(data.results || []);
-                updateSidebarList(data);
+                if (data.exceeded) {
+                    document.getElementById('map-overflow').style.display = 'block';
+                    updateMapMarkers([]);
+                    updateSidebarList(data);
+                } else {
+                    document.getElementById('map-overflow').style.display = 'none';
+                    updateMapMarkers(data.results || []);
+                    updateSidebarList(data);
+                }
             } catch (err) {
                 console.error('Error updating WebGIS data layer:', err);
+                showError('SCAN ERROR: Failed to query spatial database.');
+            } finally {
+                document.getElementById('map-loader').style.display = 'none';
             }
         }
 
@@ -390,11 +483,24 @@
 
             const summaryHeader = document.querySelector('#listings-summary h3');
             if (summaryHeader) {
-                if (total > limit) {
+                if (data.exceeded) {
+                    summaryHeader.innerHTML = `Visible Listings <span style="font-size: 0.8rem; color: #ff3333;">(OVERFLOW)</span>`;
+                } else if (total > limit) {
                     summaryHeader.innerHTML = `Visible Listings <span style="font-size: 0.8rem; color: #f1c40f;">(Showing ${limit} of ${total.toLocaleString()})</span>`;
                 } else {
                     summaryHeader.innerHTML = `Visible Listings <span style="font-size: 0.8rem; color: #2ecc71;">(${total.toLocaleString()} found)</span>`;
                 }
+            }
+
+            if (data.exceeded) {
+                listContainer.innerHTML = `
+                    <div style="color: #ff3333; border: 1px dashed #800000; padding: 15px; background: #1f0808; text-align: center; text-transform: uppercase; line-height: 1.4;">
+                        [ SYSTEM OVERFLOW ]<br>
+                        2,000+ matches found.<br>
+                        Zoom in or filter by price to scan listings.
+                    </div>
+                `;
+                return;
             }
 
             if (pois.length === 0) {
